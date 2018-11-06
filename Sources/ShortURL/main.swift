@@ -4,7 +4,6 @@ import LoggerAPI
 import HeliumLogger
 
 do {
-
     HeliumLogger.use(LoggerMessageType.info)
 
     let app = try App()

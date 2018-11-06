@@ -1,4 +1,5 @@
 //  Copyright © 2018 Jon. All rights reserved.
+
 import Foundation
 import Kitura
 import Health
@@ -26,6 +27,8 @@ public class App {
     func postInit() throws {
         // Endpoints
         initializeHealthRoutes(app: self)
+        // router.get(middleware: ShortPathRouter())
+        ShortPathRouter().registerShortPaths(app: self)
     }
 
     public func run() throws {

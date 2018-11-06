@@ -9,7 +9,7 @@ import LoggerAPI
 
 class RouteTests: XCTestCase {
     static var port: Int!
-    static var allTests : [(String, (RouteTests) -> () throws -> Void)] {
+    static var allTests: [(String, (RouteTests) -> () throws -> Void)] {
         return [
             ("testGetStatic", testGetStatic)
         ]
