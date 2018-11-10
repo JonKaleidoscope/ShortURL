@@ -11,7 +11,8 @@ class RouteTests: XCTestCase {
     static var port: Int!
     static var allTests: [(String, (RouteTests) -> () throws -> Void)] {
         return [
-            ("testGetStatic", testGetStatic)
+            ("testGetStatic", testGetStatic),
+            ("testHealthRoute", testHealthRoute)
         ]
     }
 
