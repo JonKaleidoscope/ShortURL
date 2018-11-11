@@ -15,6 +15,21 @@ class ShortPathRouter: RouterMiddleware {
 
     func handle(request: RouterRequest, response: RouterResponse, next: @escaping () -> Void) throws {
         defer { next() }
+        // Previous handler has already set the status and response no need to continue
+        if response.statusCode == .OK { return }
+
+        switch request.method {
+        case .get:
+            try redirector(request: request, response: response, next: next)
+        case .post:
+            try updater(request: request, response: response, next: next)
+        default:
+            // Other methods are not support will return the generic 404
+            try response.status(.notFound).end()
+        }
+    }
+
+    private func redirector(request: RouterRequest, response: RouterResponse, next: @escaping () -> Void) throws {
         let urlPath = safelyRemoveForwardSlash(request.urlURL.path)
         // Grabbing the redirect URL destination
         guard let destination = shortPaths.existingPaths[urlPath] else {
@@ -23,6 +38,32 @@ class ShortPathRouter: RouterMiddleware {
         }
 
         try response.redirect(destination, status: .temporaryRedirect)
+    }
+
+    private func updater(request: RouterRequest, response: RouterResponse, next: @escaping () -> Void) throws {
+        var data = Data()
+        guard let _ = try? request.read(into: &data) else {
+            try response.status(.badRequest).end()
+            return
+        }
+
+        guard let newShortURL = try? JSONDecoder().decode(NewShortURL.self, from: data) else {
+            try response.status(.badRequest).end()
+            return
+        }
+
+        let redirectURL = newShortURL.redirectURL
+
+        // Creating New Random Path and adding it to existing paths
+        let newShortPath = PathGenerator().path
+        guard shortPaths.add(newShortPath, redirectURL: redirectURL) else {
+            // This should only really happen when there is a collision in created path
+            try response.status(.internalServerError).end()
+            return
+        }
+
+        let json = RedirectContent(shortURL: newShortPath, redirectURL: redirectURL)
+        response.status(.created).send(json: json)
     }
 
     /// Registers the already existing routes that have redirects
@@ -50,4 +91,14 @@ class ShortPathRouter: RouterMiddleware {
 
         return shortenPath
     }
+}
+
+struct NewShortURL: Codable {
+    let suggestedPath: String?
+    let redirectURL: String
+}
+
+struct RedirectContent: Codable {
+    let shortURL: String
+    let redirectURL: String
 }

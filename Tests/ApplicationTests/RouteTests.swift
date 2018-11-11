@@ -11,8 +11,9 @@ class RouteTests: XCTestCase {
     static var port: Int!
     static var allTests: [(String, (RouteTests) -> () throws -> Void)] {
         return [
-            ("testGetStatic", testGetStatic),
-            ("testHealthRoute", testHealthRoute)
+            //("testGetStatic", testGetStatic),
+            ("testHealthRoute", testHealthRoute),
+            ("testSampleShortPaths", testSampleShortPaths),
         ]
     }
 
@@ -37,11 +38,12 @@ class RouteTests: XCTestCase {
 
     override func tearDown() {
         Kitura.stop()
+        RouteTests.port = nil
         super.tearDown()
     }
 
+    /*
     func testGetStatic() {
-
         let printExpectation = expectation(description: "The /route will serve static HTML content.")
 
         URLRequest(forTestWithMethod: "GET")?
@@ -59,11 +61,30 @@ class RouteTests: XCTestCase {
 
         waitForExpectations(timeout: 10.0, handler: nil)
     }
-    
+    */
+
+    func testSampleShortPaths() {
+        let samplePaths = [
+            "health": "localhost:8080/health/check",
+            ]
+        let requestExpectation = expectation(description: "The Sample ShortURLs")
+        requestExpectation.expectedFulfillmentCount = samplePaths.count
+
+        for (path, destination) in samplePaths {
+            var request = URLRequest(forTestWithMethod: "GET", route: path)
+            request?.cachePolicy = .reloadIgnoringCacheData
+            request?.sendForTestingWithKitura { data, statusCode in
+                XCTAssertEqual(statusCode, 200)
+            }
+            requestExpectation.fulfill()
+        }
+        waitForExpectations(timeout: 10.0, handler: nil)
+    }
+
     func testHealthRoute() {
         let printExpectation = expectation(description: "The /health route will print UP, followed by a timestamp.")
-        
-        URLRequest(forTestWithMethod: "GET", route: "health")?
+        let request =
+        URLRequest(forTestWithMethod: "GET", route: "health/check")?
             .sendForTestingWithKitura { data, statusCode in
                 if let getResult = String(data: data, encoding: String.Encoding.utf8) {
                     XCTAssertEqual(statusCode, 200)
@@ -127,7 +148,7 @@ private extension URLRequest {
                     var rawUserData = Data()
                     do {
                         let _ = try resp.read(into: &rawUserData)
-                        let str = String(data: rawUserData, encoding: String.Encoding(rawValue: String.Encoding.utf8.rawValue))
+                        let str = String(data: rawUserData, encoding: String.Encoding.utf8)
                         print("Error response from Kitura-Starter: \(String(describing: str))")
                     } catch {
                         print("Failed to read response data.")
