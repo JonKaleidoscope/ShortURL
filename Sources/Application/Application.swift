@@ -6,9 +6,9 @@ import Health
 import CloudEnvironment
 
 public let health = Health()
-func initializeHealthRoutes(app: App) {
+func initializeHealthRoutes(on router: Router) {
 
-    app.router.get("/health") { (respondWith: (Status?, RequestError?) -> Void) -> Void in
+    router.get("/health") { (respondWith: (Status?, RequestError?) -> Void) -> Void in
         if health.status.state == .UP {
             respondWith(health.status, nil)
         } else {
@@ -18,17 +18,18 @@ func initializeHealthRoutes(app: App) {
 }
 
 public class App {
+    // MARK: - Properties
     let router = Router()
     let cloudEnv = CloudEnv()
 
+    // MARK: - Functions
     public init() throws {
     }
 
     func postInit() throws {
         // Endpoints
-        initializeHealthRoutes(app: self)
-        // router.get(middleware: ShortPathRouter())
-        ShortPathRouter().registerShortPaths(app: self)
+        initializeHealthRoutes(on: router)
+        router.get(middleware: ShortPathRouter())
     }
 
     public func run() throws {
