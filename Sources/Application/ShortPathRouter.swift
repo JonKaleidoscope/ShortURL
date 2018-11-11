@@ -91,6 +91,11 @@ class ShortPathRouter: RouterMiddleware {
 
         return shortenPath
     }
+
+    @discardableResult
+    func add(_ path: String, redirectURL: String, overwrite: Bool = false) -> Bool {
+        return shortPaths.add(path, redirectURL: redirectURL, overwrite: overwrite)
+    }
 }
 
 struct NewShortURL: Codable {
@@ -101,4 +106,11 @@ struct NewShortURL: Codable {
 struct RedirectContent: Codable {
     let shortURL: String
     let redirectURL: String
+}
+extension NewShortURL {
+    var json: Data? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        return try? encoder.encode(self)
+    }
 }
