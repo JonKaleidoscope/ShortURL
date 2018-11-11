@@ -8,12 +8,17 @@ import LoggerAPI
 @testable import Application
 
 class RouteTests: XCTestCase {
+    // There is state held in the `App` class and it needs to be retained
+    static var app: App!
     static var port: Int!
+    static var url: String!
     static var allTests: [(String, (RouteTests) -> () throws -> Void)] {
         return [
             //("testGetStatic", testGetStatic),
+            ("testRouteTestsProperties", testRouteTestsProperties),
             ("testHealthRoute", testHealthRoute),
             ("testSampleShortPaths", testSampleShortPaths),
+            ("testPOST_NewShortURLCreated", testPOST_NewShortURLCreated)
         ]
     }
 
@@ -26,10 +31,14 @@ class RouteTests: XCTestCase {
             print("------------New Test----------")
             print("------------------------------")
 
-            let app = try App()
-            RouteTests.port = app.cloudEnv.port
-            try app.postInit()
-            Kitura.addHTTPServer(onPort: RouteTests.port, with: app.router)
+            RouteTests.app = try App()
+            RouteTests.port = RouteTests.app.cloudEnv.port
+            // Using `String(RouteTests.port)` because `\(RouteTests.port)` returning Optional(8080)
+            // Since the `RouteTests.port` is an implicitly unwrapped optional,
+            // its `description` returns its optional value representation
+            RouteTests.url = "http://127.0.0.1:" + String(RouteTests.port)
+            try RouteTests.app.postInit()
+            Kitura.addHTTPServer(onPort: RouteTests.port, with: RouteTests.app.router)
             Kitura.start()
         } catch {
             XCTFail("Couldn't start Application test server: \(error)")
@@ -39,7 +48,16 @@ class RouteTests: XCTestCase {
     override func tearDown() {
         Kitura.stop()
         RouteTests.port = nil
+        RouteTests.url = nil
+        RouteTests.app = nil
         super.tearDown()
+    }
+
+    func testRouteTestsProperties() {
+        XCTAssertEqual(RouteTests.port, 8080)
+        XCTAssertEqual(RouteTests.url, "http://127.0.0.1:8080")
+        XCTAssertEqual(RouteTests.allTests.count, 4,
+                       "This number should increase as of Linux Test increase")
     }
 
     /*
@@ -81,10 +99,46 @@ class RouteTests: XCTestCase {
         waitForExpectations(timeout: 10.0, handler: nil)
     }
 
+    func testPOST_NewShortURLCreated() {
+        let createdExpectation = expectation(description: "New Short URL Created.")
+        let testNewlyAddedRoute = { [unowned self] (shortURL: String) in
+            self.testHealth(route: shortURL)
+        }
+
+        // Testing with localhost `127.0.0.1` because it does not require internet for validation
+        let expectedRedirect = RouteTests.url + "/health/check"
+        let body = NewShortURL(suggestedPath: nil, redirectURL: expectedRedirect).json
+        let request = URLRequest(forTestWithMethod: "POST", route: "/", body: body)
+        request?.sendForTestingWithKitura { data, statusCode in
+            createdExpectation.fulfill()
+            XCTAssertEqual(statusCode, 201,
+                           "The `statusCode` does not equal the expected 201, it mave have need altered.")
+
+            let decoder = JSONDecoder()
+            guard let result = try? decoder.decode(RedirectContent.self, from: data) else {
+                return XCTFail("Unable to create `RedirectContent`")
+            }
+
+            XCTAssertEqual(result.redirectURL, expectedRedirect)
+            let shortURL = result.shortURL
+            XCTAssertEqual(shortURL.count, 5)
+
+            // Testing the shortURL that was added to validate it has been save.
+            // This will also test that we are able to be taken to that URL successfully
+            testNewlyAddedRoute(shortURL)
+        }
+        waitForExpectations(timeout: 5.0, handler: nil)
+    }
+
     func testHealthRoute() {
+        testHealth()
+        testHealth(route: "health")
+        waitForExpectations(timeout: 5.0, handler: nil)
+    }
+
+    func testHealth(route: String = "health/check") {
         let printExpectation = expectation(description: "The /health route will print UP, followed by a timestamp.")
-        let request =
-        URLRequest(forTestWithMethod: "GET", route: "health/check")?
+        URLRequest(forTestWithMethod: "GET", route: route)?
             .sendForTestingWithKitura { data, statusCode in
                 if let getResult = String(data: data, encoding: String.Encoding.utf8) {
                     XCTAssertEqual(statusCode, 200)
@@ -98,14 +152,13 @@ class RouteTests: XCTestCase {
                 }
                 printExpectation.fulfill()
         }
-        waitForExpectations(timeout: 10.0, handler: nil)
     }
 }
 
 private extension URLRequest {
 
     init?(forTestWithMethod method: String, route: String = "", body: Data? = nil) {
-        if let url = URL(string: "http://127.0.0.1:\(RouteTests.port)/" + route){
+        if let url = URL(string: RouteTests.url + "/" + route) {
             self.init(url: url)
             addValue("application/json", forHTTPHeaderField: "Content-Type")
             httpMethod = method
@@ -134,7 +187,10 @@ private extension URLRequest {
 
         let req = HTTP.request(requestOptions) { resp in
 
-            if let resp = resp, resp.statusCode == HTTPStatusCode.OK || resp.statusCode == HTTPStatusCode.accepted {
+            if let resp = resp,
+                resp.statusCode == HTTPStatusCode.OK ||
+                resp.statusCode == HTTPStatusCode.accepted ||
+                resp.statusCode == HTTPStatusCode.created {
                 do {
                     var body = Data()
                     try resp.readAllData(into: &body)
