@@ -132,6 +132,13 @@ class RouteTests: XCTestCase {
 
     func testHealthRoute() {
         testHealth()
+
+        // Adding `shortURL` `health` to the existing routes
+        let healthCeckURL = RouteTests.app.cloudEnv.url + HealthChecker.route
+        XCTAssertEqual(HealthChecker.route, "/health/check")
+        XCTAssertEqual(healthCeckURL, "http://localhost:8080/health/check")
+        XCTAssertTrue(RouteTests.app.spr.add("health", redirectURL: healthCeckURL),
+                      "Unable to add `health` route")
         testHealth(route: "health")
         waitForExpectations(timeout: 5.0, handler: nil)
     }

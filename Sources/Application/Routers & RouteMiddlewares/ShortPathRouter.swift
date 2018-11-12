@@ -97,20 +97,3 @@ class ShortPathRouter: RouterMiddleware {
         return shortPaths.add(path, redirectURL: redirectURL, overwrite: overwrite)
     }
 }
-
-struct NewShortURL: Codable {
-    let suggestedPath: String?
-    let redirectURL: String
-}
-
-struct RedirectContent: Codable {
-    let shortURL: String
-    let redirectURL: String
-}
-extension NewShortURL {
-    var json: Data? {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = .prettyPrinted
-        return try? encoder.encode(self)
-    }
-}
