@@ -30,7 +30,7 @@ class ShortPathRouter: RouterMiddleware {
     }
 
     private func redirector(request: RouterRequest, response: RouterResponse, next: @escaping () -> Void) throws {
-        let urlPath = safelyRemoveForwardSlash(request.urlURL.path)
+        let urlPath = request.urlURL.path.removedLeadingSlash
         // Grabbing the redirect URL destination
         guard let destination = shortPaths.existingPaths[urlPath] else {
             try response.status(.notFound).end()
@@ -81,15 +81,6 @@ class ShortPathRouter: RouterMiddleware {
                 count += 1
             })
         }
-    }
-
-    func safelyRemoveForwardSlash(_ urlPath: String) -> String {
-        let char = urlPath.first
-        guard char == Character("/") else { return urlPath }
-        var shortenPath = urlPath
-        shortenPath.removeFirst()
-
-        return shortenPath
     }
 
     @discardableResult
