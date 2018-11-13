@@ -21,6 +21,20 @@ public class App {
         // Endpoints
         HealthChecker.initializeHealthRoutes(on: router)
 
+        router.all("/") { (req, res, next) in
+            // Currently the "POST" for adding new `ShortURLs` operates on the `/` home page path.
+            // Any other HTTP methods should return a `Bad Request`.
+            if req.method == .post { next(); return }
+
+            // This function is also here for removing the default Kitura home page
+            // that is constucted when no response is generated for this path.
+            // Placing the logic before the `router.get(middleware: spr)` for quicker failure, visibilty,
+            // and keeping logic out of the `ShortPathRouter`.
+            // If this function is not here, for a GET, a look up is performed in the
+            // `ShortPathRouter` and will return `404 Not Found`.
+            // For all other requests the Kitura help home page is loaded.
+            try res.status(.badRequest).end()
+        }
         router.get(middleware: spr)
         router.post(middleware: spr)
     }

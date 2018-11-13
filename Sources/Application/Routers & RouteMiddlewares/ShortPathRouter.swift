@@ -14,9 +14,8 @@ class ShortPathRouter: RouterMiddleware {
     }()
 
     func handle(request: RouterRequest, response: RouterResponse, next: @escaping () -> Void) throws {
-        defer { next() }
         // Previous handler has already set the status and response no need to continue
-        if response.statusCode == .OK { return }
+        if response.statusCode == .OK { next(); return }
 
         switch request.method {
         case .get:
@@ -63,7 +62,7 @@ class ShortPathRouter: RouterMiddleware {
         }
 
         let json = RedirectContent(shortURL: newShortPath, redirectURL: redirectURL)
-        response.status(.created).send(json: json)
+        try response.status(.created).send(json: json).end()
     }
 
     /// Registers the already existing routes that have redirects

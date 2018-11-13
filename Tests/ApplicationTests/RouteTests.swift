@@ -16,9 +16,11 @@ class RouteTests: XCTestCase {
         return [
             //("testGetStatic", testGetStatic),
             ("testRouteTestsProperties", testRouteTestsProperties),
+            ("testBadRequest", testBadRequest),
+            ("testBadRequestOnHomePage", testBadRequestOnHomePage),
             ("testHealthRoute", testHealthRoute),
             ("testSampleShortPaths", testSampleShortPaths),
-            ("testPOST_NewShortURLCreated", testPOST_NewShortURLCreated)
+            ("testPOST_NewShortURLCreated", testPOST_NewShortURLCreated),
         ]
     }
 
@@ -56,8 +58,41 @@ class RouteTests: XCTestCase {
     func testRouteTestsProperties() {
         XCTAssertEqual(RouteTests.port, 8080)
         XCTAssertEqual(RouteTests.url, "http://127.0.0.1:8080")
-        XCTAssertEqual(RouteTests.allTests.count, 4,
-                       "This number should increase as of Linux Test increase")
+        XCTAssertEqual(RouteTests.allTests.count, 6,
+                       "This number should increase as the Linux tests increase.")
+    }
+
+    func testBadRequest() {
+        let methods = ["PUT", "HEAD", "DELETE", "PATCH"]
+        let requestExpectation = expectation(description: "Home Page Request")
+        requestExpectation.expectedFulfillmentCount = methods.count
+
+        for method in methods {
+            let randomPath = PathGenerator.randomString(ofLength: 2)
+            var request = URLRequest(forTestWithMethod: method, route: randomPath)
+            request?.cachePolicy = .reloadIgnoringCacheData
+            request?.sendForTestingWithKitura { data, statusCode in
+                requestExpectation.fulfill()
+                XCTAssertEqual(statusCode, 404, "\(method): Not returning `Not Found` on \(randomPath).")
+            }
+        }
+        waitForExpectations(timeout: 10.0, handler: nil)
+    }
+
+    func testBadRequestOnHomePage() {
+        let methods = ["GET", "PUT", "HEAD", "DELETE", "PATCH"]
+        let requestExpectation = expectation(description: "Home Page Request")
+        requestExpectation.expectedFulfillmentCount = methods.count
+
+        for method in methods {
+            var request = URLRequest(forTestWithMethod: method, route: "/")
+            request?.cachePolicy = .reloadIgnoringCacheData
+            request?.sendForTestingWithKitura { _, statusCode in
+                requestExpectation.fulfill()
+                XCTAssertEqual(statusCode, 400, "\(method): Not returning `Bad Request`.")
+            }
+        }
+        waitForExpectations(timeout: 10.0, handler: nil)
     }
 
     /*
@@ -82,17 +117,20 @@ class RouteTests: XCTestCase {
     */
 
     func testSampleShortPaths() {
+        // This test makes calls to the internet, so an actual connection is needed.
         let samplePaths = [
-            "health": "localhost:8080/health/check",
+            //"health": "localhost:8080/health/check",
+            "ABC": "https://google.com",
+            "amz": "https://amazon.com",
             ]
         let requestExpectation = expectation(description: "The Sample ShortURLs")
         requestExpectation.expectedFulfillmentCount = samplePaths.count
 
-        for (path, destination) in samplePaths {
+        for (path, _) in samplePaths {
             var request = URLRequest(forTestWithMethod: "GET", route: path)
             request?.cachePolicy = .reloadIgnoringCacheData
             request?.sendForTestingWithKitura { data, statusCode in
-                XCTAssertEqual(statusCode, 200)
+                XCTAssertEqual(statusCode, 200, "\(path) not returning successfully.")
             }
             requestExpectation.fulfill()
         }
@@ -208,11 +246,12 @@ private extension URLRequest {
             } else {
                 if let resp = resp {
                     print("Status code: \(resp.statusCode)")
-                    var rawUserData = Data()
+                    var rawData = Data()
                     do {
-                        let _ = try resp.read(into: &rawUserData)
-                        let str = String(data: rawUserData, encoding: String.Encoding.utf8)
+                        let _ = try resp.read(into: &rawData)
+                        let str = String(data: rawData, encoding: String.Encoding.utf8)
                         print("Error response from Kitura-Starter: \(String(describing: str))")
+                        fn(rawData, resp.statusCode.rawValue)
                     } catch {
                         print("Failed to read response data.")
                     }
