@@ -64,7 +64,7 @@ class RouteTests: XCTestCase {
 
     func testBadRequest() {
         let methods = ["PUT", "HEAD", "DELETE", "PATCH"]
-        let requestExpectation = expectation(description: "Home Page Request")
+        let requestExpectation = expectation(description: "Sending Unsupported Request Methods.")
         requestExpectation.expectedFulfillmentCount = methods.count
 
         for method in methods {
@@ -81,7 +81,7 @@ class RouteTests: XCTestCase {
 
     func testBadRequestOnHomePage() {
         let methods = ["GET", "PUT", "HEAD", "DELETE", "PATCH"]
-        let requestExpectation = expectation(description: "Home Page Request")
+        let requestExpectation = expectation(description: "Home Page Request.")
         requestExpectation.expectedFulfillmentCount = methods.count
 
         for method in methods {
@@ -123,7 +123,7 @@ class RouteTests: XCTestCase {
             "ABC": "https://google.com",
             "amz": "https://amazon.com",
             ]
-        let requestExpectation = expectation(description: "The Sample ShortURLs")
+        let requestExpectation = expectation(description: "The Sample ShortURLs.")
         requestExpectation.expectedFulfillmentCount = samplePaths.count
 
         for (path, _) in samplePaths {
@@ -154,7 +154,7 @@ class RouteTests: XCTestCase {
 
             let decoder = JSONDecoder()
             guard let result = try? decoder.decode(RedirectContent.self, from: data) else {
-                return XCTFail("Unable to create `RedirectContent`")
+                return XCTFail("Unable to create `RedirectContent`.")
             }
 
             XCTAssertEqual(result.redirectURL, expectedRedirect)
@@ -176,7 +176,7 @@ class RouteTests: XCTestCase {
         XCTAssertEqual(HealthChecker.route, "/health/check")
         XCTAssertEqual(healthCeckURL, "http://localhost:8080/health/check")
         XCTAssertTrue(RouteTests.app.spr.add("health", redirectURL: healthCeckURL),
-                      "Unable to add `health` route")
+                      "Unable to add `health` route.")
         testHealth(route: "health")
         waitForExpectations(timeout: 5.0, handler: nil)
     }
@@ -191,7 +191,8 @@ class RouteTests: XCTestCase {
                     let date = Date()
                     let calendar = Calendar.current
                     let yearString = String(describing: calendar.component(.year, from: date))
-                    XCTAssertTrue(getResult.contains(yearString), "Failed to create String from date. Date is either missing or incorrect.")
+                    XCTAssertTrue(getResult.contains(yearString),
+                                  "Failed to create String from date. Date is either missing or incorrect.")
                 } else {
                     XCTFail("Unable to convert request Data to String.")
                 }
@@ -220,7 +221,7 @@ private extension URLRequest {
     func sendForTestingWithKitura(fn: @escaping (Data, Int) -> Void) {
 
         guard let method = httpMethod, var path = url?.path, let headers = allHTTPHeaderFields else {
-            XCTFail("Invalid request params")
+            XCTFail("Invalid request params.")
             return
         }
 
@@ -241,7 +242,7 @@ private extension URLRequest {
                     try resp.readAllData(into: &body)
                     fn(body, resp.statusCode.rawValue)
                 } catch {
-                    print("Bad JSON document received from Kitura-Starter.")
+                    print("Bad JSON document received.")
                 }
             } else {
                 if let resp = resp {
@@ -250,7 +251,7 @@ private extension URLRequest {
                     do {
                         let _ = try resp.read(into: &rawData)
                         let str = String(data: rawData, encoding: String.Encoding.utf8)
-                        print("Error response from Kitura-Starter: \(String(describing: str))")
+                        print("Error response: \(String(describing: str)).")
                         fn(rawData, resp.statusCode.rawValue)
                     } catch {
                         print("Failed to read response data.")
